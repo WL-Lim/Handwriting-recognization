@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手寫輸入法</title>
+    <style>
+        .text{
+            font-size: 30px;
+        }
+        #intro{
+            font-size: 40px;
+        }
+        #info{
+            font-size: 30px;
+        }
+        #canvas{
+            background-color: gray;
+        }
+        #result{
+            font-size: 28px;
+        }
+    </style>
+</head>
+<body class="text">
+    <p id="intro">手寫輸入法</p>
+    <p id="info">
+        1. 在下框中寫下單一英文字母或數字。<br>
+        2. 寫好按Enter。<br>
+        3. 結果顯示於Result。<br>
+        4. Clear清空畫框，Space添加空白格，Delete刪除結果末字元。<br>
+        (辨識度不算高，有時得多寫幾次...)
+    </p>
+    <canvas id="canvas" width="280" height="280" style="padding-bottom: 20px;"></canvas>
+    <br><p id="result">Result: </p><br>
+    <button id="clearButton" class="text">Clear</button>
+    <button id="predictButton" class="text" type="button">Enter</button>
+    <button id="spaceButton" class="text" type="button">Space</button>
+    <button id="deleteButton" class="text" type="button">Delete</button>
+    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+    <script>
+        (function(){
+        var canvas = document.querySelector("#canvas");
+        var context = canvas.getContext("2d");
+        canvas.width = 280;
+        canvas.height = 280;
+        var Mouse = {x: 0, y: 0};
+        var lastMouse = {x: 0, y: 0};
+        context.fillStyle = "black";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.color = "white";
+        context.lineWidth = 15;
+        context.lineJoin = context.lineCap = "round";
+        clearCanvas();
+        canvas.addEventListener("mousemove", function(e){
+            lastMouse.x = Mouse.x;
+            lastMouse.y = Mouse.y;
+            Mouse.x = e.pageX - this.offsetLeft;
+            Mouse.y = e.pageY - this.offsetTop;
+        }, false);
+        canvas.addEventListener("mousedown", function(){
+            canvas.addEventListener("mousemove", onDraw, false);
+        }, false);
+        canvas.addEventListener("mouseup", function(){
+            canvas.removeEventListener("mousemove", onDraw, false);
+        }, false);
+        function clearCanvas(){
+            $("#clearButton").click(function(){
+                context.clearRect(0, 0, 280, 280);
+                context.fillStyle = "black";
+                context.fillRect(0, 0, canvas.width, canvas.height);
+            });
+        };
+        function onDraw(){
+            context.lineWidth = context.lineWidth;
+            context.lineJoin = "round";
+            context.lineCap = "round";
+            context.strokeStyle = context.color;
+            context.beginPath();
+            context.moveTo(lastMouse.x, lastMouse.y);
+            context.lineTo(Mouse.x, Mouse.y);
+            context.closePath();
+            context.stroke();
+        };
+        })();
+    </script>
+    <script type=text/javascript>
+        var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    </script>
+    <script>
+        $("#spaceButton").click(function(){
+            var res = document.querySelector("#result");
+            res.innerHTML = res.innerHTML + "&nbsp";
+        })
+        $("#deleteButton").click(function(){
+            var res = document.querySelector("#result");
+            res.innerHTML = res.innerHTML.slice(0, -1);
+        })
+        $("#predictButton").click(function(){
+            var canvasobj = $("#canvas")[0];
+            var img = canvasobj.toDataURL();
+            $.ajax({
+                type: "POST", 
+                url: $SCRIPT_ROOT + "/predict/", 
+                data: img, 
+                success: function(data){
+                    $("#result").append(data);
+                }
+            });
+        })
+    </script>
+</body>
+</html>
